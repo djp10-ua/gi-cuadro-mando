@@ -1,7 +1,7 @@
 /* ── MAIN ENTRY POINT ── */
 document.addEventListener('DOMContentLoaded', async () => {
   const { loadCounts, loadSystem, loadStorage, loadTopTracksTable, loadBenchmark, setStatus, setLastUpdate, activateSection, fetchJSON } = window.dashboardCoreReady;
-  const { renderGenres, renderPopularity, renderTopTracksChart, renderTracksYear, renderFeaturesYear, renderRadar, renderTopArtists, renderFavsDist, renderProvinces, renderStorageCharts, renderMemGauge, renderBenchRuns, mkSparkline } = window.dashboardCharts;
+  const { renderGenres, renderPopularity, renderTopTracksChart, renderTracksYear, renderFeaturesYear, renderRadar, renderTopArtists, renderFavsDist, renderPopulations, renderStorageCharts, renderMemGauge, renderBenchRuns, mkSparkline } = window.dashboardCharts;
   const REFRESH_INTERVAL_MS = 30000;
 
   const overlay = document.getElementById('loading-overlay');
@@ -25,13 +25,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     overlay.classList.remove('hidden');
     try {
       // Parallel first load
-      const [counts, sysData, storageData, topTracks, benchd, provinces] = await Promise.allSettled([
+      const [counts, sysData, storageData, topTracks, benchd, populations] = await Promise.allSettled([
         loadCounts(),
         loadSystem(),
         loadStorage(),
         loadTopTracksTable(),
         loadBenchmark(),
-        fetchJSON('/api/users-by-province'),
+        fetchJSON('/api/users-by-population'),
       ]);
 
       // Sparklines (decorative)
@@ -65,10 +65,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       ]);
 
       // Users charts
-      if (provinces.status === 'fulfilled') {
-        await renderProvinces(provinces.value);
+      if (populations.status === 'fulfilled') {
+        await renderPopulations(populations.value);
       } else {
-        document.getElementById('kv-provinces').textContent = '—';
+        document.getElementById('kv-populations').textContent = '—';
       }
       if (counts.status === 'fulfilled') {
         const c = counts.value;

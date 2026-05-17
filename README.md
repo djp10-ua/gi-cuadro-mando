@@ -47,7 +47,7 @@ El panel y los endpoints `/api/*` están protegidos por **Basic Auth**.
 
 - `GET /api/storage`: tamaño total BD + tamaño por tabla + baseline persistente
 - `GET /api/system`: RAM, CPU, disco libre del host + baseline persistente
-- `GET /api/users-by-province`: usuarios agregados por provincia
+- `GET /api/users-by-population`: top 10 usuarios agregados por población
 - `GET /api/benchmark`: benchmark de consulta compleja (5 ejecuciones, media, desviación, IC95, baseline persistente, query usada)
 
 ## Baselines persistentes

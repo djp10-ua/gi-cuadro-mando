@@ -158,23 +158,23 @@ async function renderFavsDist() {
   });
 }
 
-// ── Province bar ──
-async function renderProvinces(providedData) {
-  const data = providedData || await window.dashboardCoreReady.fetchJSON('/api/users-by-province');
+// ── Populations charts ──
+async function renderPopulations(providedData) {
+  const data = providedData || await window.dashboardCoreReady.fetchJSON('/api/users-by-population');
   if (!Array.isArray(data) || data.length === 0) return;
-  window.dashboardCoreReady.loadProvinceKPI(data);
-  mkChart('chart-provinces', {
+  window.dashboardCoreReady.loadPopulationKPI(data);
+  mkChart('chart-populations', {
     type: 'bar',
     data: {
-      labels: data.map(d => d.province),
+      labels: data.map(d => d.population),
       datasets: [{ label: 'Usuarios', data: data.map(d => d.count), backgroundColor: PALETTE.map(c => c + 'cc'), borderRadius: 5 }],
     },
     options: { ...BASE_OPTS, plugins: { ...BASE_OPTS.plugins, legend: { display: false } } },
   });
-  mkChart('chart-provinces-pie', {
+  mkChart('chart-populations-pie', {
     type: 'doughnut',
     data: {
-      labels: data.map(d => d.province),
+      labels: data.map(d => d.population),
       datasets: [{ data: data.map(d => d.count), backgroundColor: PALETTE.map(c => c + 'dd'), borderColor: '#111827', borderWidth: 2 }],
     },
     options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#8b9cc8', font: { size: 11 }, boxWidth: 12 } }, tooltip: BASE_OPTS.plugins.tooltip }, cutout: '60%' },
@@ -268,4 +268,4 @@ function renderBenchRuns(d) {
   });
 }
 
-window.dashboardCharts = { renderGenres, renderPopularity, renderTopTracksChart, renderTracksYear, renderFeaturesYear, renderRadar, renderTopArtists, renderFavsDist, renderProvinces, renderStorageCharts, renderMemGauge, renderBenchRuns, mkSparkline };
+window.dashboardCharts = { renderGenres, renderPopularity, renderTopTracksChart, renderTracksYear, renderFeaturesYear, renderRadar, renderTopArtists, renderFavsDist, renderPopulations, renderStorageCharts, renderMemGauge, renderBenchRuns, mkSparkline };

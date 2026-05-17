@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Panel de Control de Recursos – Base de datos Spotify/Usuarios. Monitorización en tiempo real de almacenamiento, rendimiento y KPIs." />
+  <title>🎛️ Control de Recursos · Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ══════════════════════════════════ SIDEBAR ══════════════════════════════ -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🎛️</div>
+    <div class="logo-text">
+      <span class="logo-title">Control</span>
+      <span class="logo-sub">de Recursos</span>
+    </div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <a href="#overview" class="nav-item active" id="nav-overview">
+      <span class="nav-icon">⚡</span><span class="nav-label">Resumen</span>
+    </a>
+    <a href="#storage" class="nav-item" id="nav-storage">
+      <span class="nav-icon">💾</span><span class="nav-label">Almacenamiento</span>
+    </a>
+    <a href="#music" class="nav-item" id="nav-music">
+      <span class="nav-icon">🎵</span><span class="nav-label">Música</span>
+    </a>
+    <a href="#users" class="nav-item" id="nav-users">
+      <span class="nav-icon">👥</span><span class="nav-label">Usuarios</span>
+    </a>
+    <a href="#performance" class="nav-item" id="nav-performance">
+      <span class="nav-icon">🚀</span><span class="nav-label">Rendimiento</span>
+    </a>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="last-update">
+      <span class="update-dot"></span>
+      <span id="last-update-time">Actualizando…</span>
+    </div>
+    <button class="refresh-btn" id="refresh-btn" title="Actualizar datos">↻</button>
+  </div>
+</aside>
+
+<!-- ══════════════════════════════════ MAIN ═════════════════════════════════ -->
+<main class="main-content">
+
+  <!-- Top bar -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <h1 class="page-title" id="section-title">Resumen General</h1>
+      <span class="section-badge" id="section-badge">OVERVIEW</span>
+    </div>
+    <div class="topbar-right">
+      <div class="status-pill" id="global-status">
+        <span class="status-dot"></span>
+        <span id="status-text">Conectando…</span>
+      </div>
+      <div class="topbar-time" id="topbar-clock"></div>
+    </div>
+  </header>
+
+  <!-- ─── SECTION: OVERVIEW ─── -->
+  <section class="dashboard-section active" id="overview">
+
+    <!-- KPI row -->
+    <div class="kpi-row">
+      <div class="kpi-card gradient-blue" id="kpi-tracks">
+        <div class="kpi-icon">🎵</div>
+        <div class="kpi-data">
+          <div class="kpi-value" id="kv-tracks">—</div>
+          <div class="kpi-label">Canciones</div>
+        </div>
+        <div class="kpi-sparkline"><canvas id="spark-tracks"></canvas></div>
+      </div>
+      <div class="kpi-card gradient-purple" id="kpi-users">
+        <div class="kpi-icon">👤</div>
+        <div class="kpi-data">
+          <div class="kpi-value" id="kv-users">—</div>
+          <div class="kpi-label">Usuarios</div>
+        </div>
+        <div class="kpi-sparkline"><canvas id="spark-users"></canvas></div>
+      </div>
+      <div class="kpi-card gradient-green" id="kpi-addresses">
+        <div class="kpi-icon">📍</div>
+        <div class="kpi-data">
+          <div class="kpi-value" id="kv-addresses">—</div>
+          <div class="kpi-label">Direcciones</div>
+        </div>
+        <div class="kpi-sparkline"><canvas id="spark-addr"></canvas></div>
+      </div>
+      <div class="kpi-card gradient-orange" id="kpi-favs">
+        <div class="kpi-icon">❤️</div>
+        <div class="kpi-data">
+          <div class="kpi-value" id="kv-favs">—</div>
+          <div class="kpi-label">Favoritas</div>
+        </div>
+        <div class="kpi-sparkline"><canvas id="spark-favs"></canvas></div>
+      </div>
+    </div>
+
+    <!-- Charts row 1 -->
+    <div class="charts-row">
+      <div class="chart-card wide" id="cc-genres">
+        <div class="chart-header">
+          <h3>Top Géneros Musicales</h3>
+          <span class="chart-badge">Spotify Tracks</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-genres"></canvas>
+        </div>
+      </div>
+      <div class="chart-card" id="cc-pop-dist">
+        <div class="chart-header">
+          <h3>Distribución de Popularidad</h3>
+          <span class="chart-badge">Histograma</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-popularity"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts row 2 -->
+    <div class="charts-row">
+      <div class="chart-card" id="cc-top-tracks">
+        <div class="chart-header">
+          <h3>🏆 Top 10 Canciones más Populares</h3>
+          <span class="chart-badge">Ranking</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-top-tracks"></canvas>
+        </div>
+      </div>
+      <div class="chart-card wide" id="cc-year">
+        <div class="chart-header">
+          <h3>Canciones por Año de Lanzamiento</h3>
+          <span class="chart-badge">Histórico</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-year"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ─── SECTION: STORAGE ─── -->
+  <section class="dashboard-section" id="storage">
+
+    <!-- Storage KPI row -->
+    <div class="kpi-row">
+      <div class="kpi-card gradient-teal" id="kpi-dbsize">
+        <div class="kpi-icon">🗄️</div>
+        <div class="kpi-data">
+          <div class="kpi-value" id="kv-dbsize">—</div>
+          <div class="kpi-label">Tamaño Total BD</div>
+        </div>
+      </div>
+      <div class="kpi-card gradient-blue" id="kpi-mem-total">
+        <div class="kpi-icon">🧠</div>
+        <div class="kpi-data">
+          <div class="kpi-value" id="kv-mem-total">—</div>
+          <div class="kpi-label">RAM Total (OS)</div>
+        </div>
+      </div>
+      <div class="kpi-card gradient-green" id="kpi-mem-free">
+        <div class="kpi-icon">✅</div>
+        <div class="kpi-data">
+          <div class="kpi-value" id="kv-mem-free">—</div>
+          <div class="kpi-label">RAM Libre (OS)</div>
+        </div>
+      </div>
+      <div class="kpi-card gradient-purple" id="kpi-cpus">
+        <div class="kpi-icon">⚙️</div>
+        <div class="kpi-data">
+          <div class="kpi-value" id="kv-cpus">—</div>
+          <div class="kpi-label">Núcleos CPU</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card" id="cc-table-sizes">
+        <div class="chart-header">
+          <h3>Tamaño por Tabla (Disco)</h3>
+          <span class="chart-badge">Bytes</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-table-sizes"></canvas>
+        </div>
+      </div>
+      <div class="chart-card" id="cc-table-rows">
+        <div class="chart-header">
+          <h3>Filas por Tabla</h3>
+          <span class="chart-badge">Registros</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-table-rows"></canvas>
+        </div>
+      </div>
+      <div class="chart-card" id="cc-mem-gauge">
+        <div class="chart-header">
+          <h3>Uso de Memoria RAM</h3>
+          <span class="chart-badge">Sistema</span>
+        </div>
+        <div class="chart-body gauge-body">
+          <canvas id="chart-mem-gauge"></canvas>
+          <div class="gauge-label" id="gauge-mem-label">—%</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Table details -->
+    <div class="data-table-card">
+      <div class="chart-header">
+        <h3>📋 Detalle de Tablas en ClickHouse</h3>
+        <span class="chart-badge">information_schema</span>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table" id="storage-table">
+          <thead>
+            <tr>
+              <th>Tabla</th>
+              <th>Tamaño en Disco</th>
+              <th>Total Filas</th>
+              <th>Parts</th>
+              <th>Estado</th>
+            </tr>
+          </thead>
+          <tbody id="storage-tbody">
+            <tr><td colspan="5" class="loading-cell">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ─── SECTION: MUSIC ─── -->
+  <section class="dashboard-section" id="music">
+
+    <div class="charts-row">
+      <div class="chart-card wide" id="cc-features-year">
+        <div class="chart-header">
+          <h3>Evolución de Características de Audio por Año</h3>
+          <span class="chart-badge">Danceability · Energy · Valence</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-features-year"></canvas>
+        </div>
+      </div>
+      <div class="chart-card" id="cc-audio-radar">
+        <div class="chart-header">
+          <h3>Radar de Características por Género</h3>
+          <span class="chart-badge">Multi-dimensión</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-radar"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card" id="cc-top-artists">
+        <div class="chart-header">
+          <h3>🎤 Artistas más Favoriteados</h3>
+          <span class="chart-badge">Top 10</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-top-artists"></canvas>
+        </div>
+      </div>
+      <div class="chart-card" id="cc-favs-dist">
+        <div class="chart-header">
+          <h3>Distribución de Favoritas por Usuario</h3>
+          <span class="chart-badge">Curva de Distribución</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-favs-dist"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Top tracks table -->
+    <div class="data-table-card">
+      <div class="chart-header">
+        <h3>🏆 Top 10 Canciones por Popularidad</h3>
+        <span class="chart-badge">Spotify Tracks</span>
+      </div>
+      <div class="table-wrapper">
+        <table class="data-table" id="top-tracks-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Canción</th>
+              <th>Artista</th>
+              <th>Género</th>
+              <th>Año</th>
+              <th>Popularidad</th>
+            </tr>
+          </thead>
+          <tbody id="top-tracks-tbody">
+            <tr><td colspan="6" class="loading-cell">Cargando…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ─── SECTION: USERS ─── -->
+  <section class="dashboard-section" id="users">
+
+    <div class="kpi-row">
+      <div class="kpi-card gradient-purple">
+        <div class="kpi-icon">🗺️</div>
+        <div class="kpi-data">
+          <div class="kpi-value" id="kv-provinces">—</div>
+          <div class="kpi-label">Provincias</div>
+        </div>
+      </div>
+      <div class="kpi-card gradient-blue">
+        <div class="kpi-icon">👤</div>
+        <div class="kpi-data">
+          <div class="kpi-value" id="kv-users2">—</div>
+          <div class="kpi-label">Total Usuarios</div>
+        </div>
+      </div>
+      <div class="kpi-card gradient-orange">
+        <div class="kpi-icon">❤️</div>
+        <div class="kpi-data">
+          <div class="kpi-value" id="kv-favs2">—</div>
+          <div class="kpi-label">Total Favoritas</div>
+        </div>
+      </div>
+      <div class="kpi-card gradient-green">
+        <div class="kpi-icon">📊</div>
+        <div class="kpi-data">
+          <div class="kpi-value" id="kv-avg-favs">—</div>
+          <div class="kpi-label">Fav. / Usuario</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card wide" id="cc-provinces">
+        <div class="chart-header">
+          <h3>Usuarios por Provincia</h3>
+          <span class="chart-badge">Top 15</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-provinces"></canvas>
+        </div>
+      </div>
+      <div class="chart-card" id="cc-provinces-pie">
+        <div class="chart-header">
+          <h3>Distribución Geográfica</h3>
+          <span class="chart-badge">Donut Chart</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-provinces-pie"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ─── SECTION: PERFORMANCE ─── -->
+  <section class="dashboard-section" id="performance">
+
+    <!-- Benchmark KPIs -->
+    <div class="kpi-row">
+      <div class="kpi-card gradient-blue" id="kpi-mean">
+        <div class="kpi-icon">⏱️</div>
+        <div class="kpi-data">
+          <div class="kpi-value" id="kv-mean">—</div>
+          <div class="kpi-label">Tiempo Medio (ms)</div>
+        </div>
+      </div>
+      <div class="kpi-card gradient-purple" id="kpi-std">
+        <div class="kpi-icon">📉</div>
+        <div class="kpi-data">
+          <div class="kpi-value" id="kv-std">—</div>
+          <div class="kpi-label">Desv. Típica (ms)</div>
+        </div>
+      </div>
+      <div class="kpi-card gradient-teal" id="kpi-ci">
+        <div class="kpi-icon">📐</div>
+        <div class="kpi-data">
+          <div class="kpi-value" id="kv-ci">—</div>
+          <div class="kpi-label">IC 95% (±ms)</div>
+        </div>
+      </div>
+      <div class="kpi-card" id="kpi-bench-status">
+        <div class="kpi-icon">🔴</div>
+        <div class="kpi-data">
+          <div class="kpi-value" id="kv-bench-status">—</div>
+          <div class="kpi-label">Estado</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card wide" id="cc-bench-runs">
+        <div class="chart-header">
+          <h3>Tiempos de Ejecución por Muestra</h3>
+          <span class="chart-badge">5 Ejecuciones · Consulta Compleja</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-bench-runs"></canvas>
+        </div>
+      </div>
+      <div class="chart-card" id="cc-bench-compare">
+        <div class="chart-header">
+          <h3>Media vs Baseline</h3>
+          <span class="chart-badge">Comparativa</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-bench-compare"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Statistics panel -->
+    <div class="stats-panel">
+      <div class="chart-header">
+        <h3>📐 Análisis Estadístico – Intervalo de Confianza 95%</h3>
+        <span class="chart-badge">Z = 1.96</span>
+      </div>
+      <div class="stats-grid" id="stats-grid">
+        <div class="stat-item">
+          <div class="stat-label">Número de muestras (n)</div>
+          <div class="stat-value" id="sv-n">5</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Media (x̄)</div>
+          <div class="stat-value" id="sv-mean">—</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Desviación Típica (σ)</div>
+          <div class="stat-value" id="sv-std">—</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Nivel de confianza</div>
+          <div class="stat-value">95%</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Z crítico</div>
+          <div class="stat-value">1.96</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Error (ε = Z·σ/√n)</div>
+          <div class="stat-value" id="sv-eps">—</div>
+        </div>
+        <div class="stat-item highlight">
+          <div class="stat-label">Resultado Final</div>
+          <div class="stat-value mono" id="sv-result">—</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Baseline (referencia)</div>
+          <div class="stat-value" id="sv-baseline">150 ms</div>
+        </div>
+      </div>
+      <div class="bench-query-box">
+        <div class="query-label">Consulta Benchmarkeada:</div>
+        <pre class="query-code">SELECT st.genre, st.artist_name, count() AS fav_count, avg(st.popularity) AS avg_pop
+FROM favoritas f
+JOIN spotify_tracks st ON f.track_id = st.track_id
+JOIN lista_usuarios lu ON f.dni = lu.dni
+JOIN lista_direcciones ld ON lu.id_dirección = ld.id
+GROUP BY st.genre, st.artist_name
+ORDER BY fav_count DESC
+LIMIT 20</pre>
+      </div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card" id="cc-bench-gauge">
+        <div class="chart-header">
+          <h3>Nivel de Rendimiento</h3>
+          <span class="chart-badge">vs Baseline</span>
+        </div>
+        <div class="chart-body gauge-body">
+          <canvas id="chart-perf-gauge"></canvas>
+          <div class="gauge-label" id="gauge-perf-label">—</div>
+        </div>
+      </div>
+      <div class="chart-card wide" id="cc-ci-chart">
+        <div class="chart-header">
+          <h3>Intervalo de Confianza Visualizado</h3>
+          <span class="chart-badge">IC 95%</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-ci"></canvas>
+        </div>
+      </div>
+    </div>
+
+  </section>
+
+</main>
+
+<!-- Loading overlay -->
+<div class="loading-overlay" id="loading-overlay">
+  <div class="loader-content">
+    <div class="loader-ring"></div>
+    <div class="loader-text">Conectando con ClickHouse…</div>
+  </div>
+</div>
+
+<script src="app-core.js"></script>
+<script src="app-charts.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

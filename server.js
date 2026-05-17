@@ -160,6 +160,21 @@ async function resolveUserAddressColumn() {
   throw new Error('Address column not found in default.lista_usuarios');
 }
 
+async function resolveAddressPopulationColumn() {
+  const columns = await query('DESCRIBE TABLE default.lista_direcciones');
+  const names = columns.map(c => String(c.name || ''));
+
+  const exactCandidates = ['población', 'poblacion', 'localidad', 'municipio', 'ciudad'];
+  const exact = exactCandidates.find(candidate => names.includes(candidate));
+  if (exact) return exact;
+
+  const normalizedCandidates = new Set(['poblacion', 'localidad', 'municipio', 'ciudad']);
+  const normalized = names.find(name => normalizedCandidates.has(normalizeId(name)));
+  if (normalized) return normalized;
+
+  throw new Error('Population column not found in default.lista_direcciones');
+}
+
 async function getServerDiskInfo() {
   try {
     const stats = await fsp.statfs(process.cwd());
@@ -378,21 +393,23 @@ app.get('/api/audio-features', async (req, res) => {
   }
 });
 
-// 9. Users by province
-app.get('/api/users-by-province', async (req, res) => {
+// 9. Users by population (localidad)
+app.get('/api/users-by-population', async (req, res) => {
   try {
-    const col = await resolveUserAddressColumn();
-    const escapedCol = col.replace(/`/g, '``');
+    const userAddrCol = await resolveUserAddressColumn();
+    const addressPopCol = await resolveAddressPopulationColumn();
+    const escapedUserAddrCol = userAddrCol.replace(/`/g, '``');
+    const escapedAddressPopCol = addressPopCol.replace(/`/g, '``');
     const rows = await query(`
-      SELECT ld.provincia, count() AS cnt
+      SELECT ld.\`${escapedAddressPopCol}\` AS poblacion, count() AS cnt
       FROM default.lista_usuarios lu
-      JOIN default.lista_direcciones ld ON lu.\`${escapedCol}\` = ld.id
-      WHERE ld.provincia IS NOT NULL AND ld.provincia != ''
-      GROUP BY ld.provincia
+      JOIN default.lista_direcciones ld ON lu.\`${escapedUserAddrCol}\` = ld.id
+      WHERE ld.\`${escapedAddressPopCol}\` IS NOT NULL AND ld.\`${escapedAddressPopCol}\` != ''
+      GROUP BY ld.\`${escapedAddressPopCol}\`
       ORDER BY cnt DESC
-      LIMIT 15
+      LIMIT 10
     `);
-    res.json(rows.map(r => ({ province: r.provincia, count: Number(r.cnt) })));
+    res.json(rows.map(r => ({ population: r.poblacion, count: Number(r.cnt) })));
   } catch (err) {
     sendApiError(res, err);
   }

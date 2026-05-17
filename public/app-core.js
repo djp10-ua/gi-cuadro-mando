@@ -190,9 +190,9 @@ async function loadBenchmark() {
   return d;
 }
 
-// ── Load provinces KPI ──
-async function loadProvinceKPI(data) {
-  setVal('kv-provinces', data.length);
+// ── Load populations KPI ──
+async function loadPopulationKPI(data) {
+  setVal('kv-populations', data.length);
 }
 
 // ── Last update ──
@@ -202,4 +202,4 @@ function setLastUpdate() {
 }
 
 // ── INIT ──
-window.dashboardCoreReady = { loadCounts, loadSystem, loadStorage, loadTopTracksTable, loadBenchmark, loadProvinceKPI, setStatus, setLastUpdate, activateSection, fetchJSON };
+window.dashboardCoreReady = { loadCounts, loadSystem, loadStorage, loadTopTracksTable, loadBenchmark, loadPopulationKPI, setStatus, setLastUpdate, activateSection, fetchJSON };

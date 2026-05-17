@@ -170,7 +170,7 @@ async function loadBenchmark() {
   const kpiCard = document.getElementById('kpi-bench-status');
   if (kpiCard) {
     kpiCard.className = 'kpi-card ' + (d.status === 'OK' ? 'gradient-green' : d.status === 'WARNING' ? 'gradient-orange' : 'gradient-blue');
-    kpiCard.querySelector('.kpi-icon').textContent = d.status === 'OK' ? '✅' : d.status === 'WARNING' ? '⚠️' : '🔴';
+    kpiCard.querySelector('.kpi-icon').textContent = d.status === 'OK' ? '✅' : d.status === 'WARNING' ? '⚠️' : d.status === 'BASELINE_SET' ? '🆕' : '🔴';
   }
 
   setVal('sv-n',      String(d.n || d.runs?.length || 0));

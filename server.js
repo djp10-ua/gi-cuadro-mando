@@ -53,7 +53,7 @@ function withBaseline(metricKey, current) {
   if (!Object.prototype.hasOwnProperty.call(baselines, metricKey)) {
     baselines[metricKey] = currentNum;
     saveBaselines().catch(err => {
-      console.warn('[BASELINE] No se pudo guardar baseline:', makeMessage(err));
+      console.warn('[BASELINE] Failed to save baseline:', makeMessage(err));
     });
   }
   const reference = Number(baselines[metricKey]) || 0;
@@ -63,17 +63,17 @@ function withBaseline(metricKey, current) {
 }
 
 function makeMessage(err) {
-  if (!err) return 'Error desconocido';
+  if (!err) return 'Unknown error';
   if (typeof err === 'string') return err;
   if (err.message) return err.message;
-  if (err.code === 'ECONNREFUSED') return 'No se puede conectar a ClickHouse (ECONNREFUSED)';
+  if (err.code === 'ECONNREFUSED') return 'Cannot connect to ClickHouse (ECONNREFUSED)';
   if (Array.isArray(err.errors) && err.errors[0] && err.errors[0].message) return err.errors[0].message;
   if (Array.isArray(err.errors) && err.errors[0] && err.errors[0].code === 'ECONNREFUSED') {
-    return 'No se puede conectar a ClickHouse (ECONNREFUSED)';
+    return 'Cannot connect to ClickHouse (ECONNREFUSED)';
   }
   if (err.cause && err.cause.message) return err.cause.message;
-  if (err.cause && err.cause.code === 'ECONNREFUSED') return 'No se puede conectar a ClickHouse (ECONNREFUSED)';
-  return 'Error desconocido';
+  if (err.cause && err.cause.code === 'ECONNREFUSED') return 'Cannot connect to ClickHouse (ECONNREFUSED)';
+  return 'Unknown error';
 }
 
 function sendApiError(res, err, status = 500) {
@@ -107,7 +107,7 @@ app.use((req, res, next) => {
     return next();
   }
   res.setHeader('WWW-Authenticate', 'Basic realm="GI Cuadro de Mando Admin"');
-  return res.status(401).send('Acceso restringido (admin).');
+  return res.status(401).send('Access restricted (admin).');
 });
 
 app.use(express.static(path.join(__dirname, 'public')));
@@ -129,7 +129,7 @@ async function query(sql) {
 
   let timeoutId;
   const timeoutPromise = new Promise((_, reject) => {
-    timeoutId = setTimeout(() => reject(new Error(`Timeout en consulta (${QUERY_TIMEOUT_MS} ms)`)), QUERY_TIMEOUT_MS);
+    timeoutId = setTimeout(() => reject(new Error(`Query timeout (${QUERY_TIMEOUT_MS} ms)`)), QUERY_TIMEOUT_MS);
   });
 
   try {
@@ -157,7 +157,7 @@ async function resolveUserAddressColumn() {
   const normalized = names.find(name => normalizeId(name) === 'id_direccion');
   if (normalized) return normalized;
 
-  throw new Error('No se encontró la columna de dirección en default.lista_usuarios');
+  throw new Error('Address column not found in default.lista_usuarios');
 }
 
 async function getServerDiskInfo() {
@@ -457,7 +457,7 @@ app.get('/api/benchmark', async (req, res) => {
     for (let i = 0; i < BENCHMARK_RUNS; i++) {
       if (CLEAR_BENCHMARK_CACHE) {
         await query('SYSTEM DROP FILESYSTEM CACHE').catch(err => {
-          console.warn('[BENCHMARK] No se pudo limpiar cache de filesystem:', makeMessage(err));
+          console.warn('[BENCHMARK] Failed to clear filesystem cache:', makeMessage(err));
         });
       }
       const start = process.hrtime.bigint();
@@ -471,9 +471,12 @@ app.get('/api/benchmark', async (req, res) => {
     const std = Math.sqrt(runs.map(v => (v - mean) ** 2).reduce((a, b) => a + b, 0) / n);
     const z = 1.96;
     const eps = z * (std / Math.sqrt(n));
+    const hadBaseline = Object.prototype.hasOwnProperty.call(baselines, 'benchmark.meanMs');
     const baselineKpi = withBaseline('benchmark.meanMs', mean);
     const baseline = baselineKpi.reference ?? mean;
-    const status = baseline > 0
+    const status = !hadBaseline
+      ? 'BASELINE_SET'
+      : baseline > 0
       ? (mean <= baseline * 1.5 ? 'OK' : mean <= baseline * 3 ? 'WARNING' : 'CRITICAL')
       : 'UNKNOWN';
 

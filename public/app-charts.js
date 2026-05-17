@@ -161,7 +161,10 @@ async function renderFavsDist() {
 // ── Populations charts ──
 async function renderPopulations(providedData) {
   const data = providedData || await window.dashboardCoreReady.fetchJSON('/api/users-by-population');
-  if (!Array.isArray(data) || data.length === 0) return;
+  if (!Array.isArray(data) || data.length === 0) {
+    window.dashboardCoreReady.loadPopulationKPI([]);
+    return;
+  }
   window.dashboardCoreReady.loadPopulationKPI(data);
   mkChart('chart-populations', {
     type: 'bar',

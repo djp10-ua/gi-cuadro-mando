@@ -36,9 +36,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Sparklines (decorative)
       mkSparkline('spark-tracks', '#3b82f6');
-      mkSparkline('spark-users',  '#8b5cf6');
-      mkSparkline('spark-addr',   '#10b981');
-      mkSparkline('spark-favs',   '#f59e0b');
+      mkSparkline('spark-users', '#8b5cf6');
+      mkSparkline('spark-addr', '#10b981');
+      mkSparkline('spark-favs', '#f59e0b');
 
       // Overview charts
       await Promise.allSettled([
@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (counts.status === 'fulfilled') {
         const c = counts.value;
         document.getElementById('kv-users2').textContent = c.lista_usuarios >= 1000 ? (c.lista_usuarios / 1000).toFixed(1) + 'K' : c.lista_usuarios;
-        document.getElementById('kv-favs2').textContent  = c.favoritas >= 1000 ? (c.favoritas / 1000).toFixed(1) + 'K' : c.favoritas;
+        document.getElementById('kv-favs2').textContent = c.favoritas >= 1000 ? (c.favoritas / 1000).toFixed(1) + 'K' : c.favoritas;
         const avg = c.lista_usuarios > 0 ? (c.favoritas / c.lista_usuarios).toFixed(1) : '—';
         document.getElementById('kv-avg-favs').textContent = avg;
       }
@@ -98,5 +98,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ── Initial load ──
   await loadAll();
-  setInterval(loadAll, REFRESH_INTERVAL_MS);
+  // setInterval(loadAll, REFRESH_INTERVAL_MS);
 });

@@ -19,7 +19,8 @@ const CLICKHOUSE_USER = process.env.CLICKHOUSE_USER || 'default';
 const CLICKHOUSE_PASSWORD = process.env.CLICKHOUSE_PASSWORD || '';
 const CLICKHOUSE_DATABASE = process.env.CLICKHOUSE_DATABASE || 'default';
 const QUERY_TIMEOUT_MS = Number(process.env.QUERY_TIMEOUT_MS || 15000);
-const BENCHMARK_RUNS = Math.max(3, Number(process.env.BENCHMARK_RUNS || 5));
+const MIN_BENCHMARK_RUNS = 3;
+const BENCHMARK_RUNS = Math.max(MIN_BENCHMARK_RUNS, Number(process.env.BENCHMARK_RUNS || 5));
 const CLEAR_BENCHMARK_CACHE = (process.env.CLEAR_BENCHMARK_CACHE || 'true').toLowerCase() === 'true';
 const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
 const BASELINE_FILE = path.join(DATA_DIR, 'baseline.json');
@@ -386,7 +387,7 @@ app.get('/api/users-by-province', async (req, res) => {
       SELECT ld.provincia, count() AS cnt
       FROM default.lista_usuarios lu
       JOIN default.lista_direcciones ld ON lu.\`${escapedCol}\` = ld.id
-      WHERE ifNull(ld.provincia, '') != ''
+      WHERE ld.provincia IS NOT NULL AND ld.provincia != ''
       GROUP BY ld.provincia
       ORDER BY cnt DESC
       LIMIT 15
@@ -471,7 +472,10 @@ app.get('/api/benchmark', async (req, res) => {
     const z = 1.96;
     const eps = z * (std / Math.sqrt(n));
     const baselineKpi = withBaseline('benchmark.meanMs', mean);
-    const baseline = baselineKpi.reference ?? mean ?? 1;
+    const baseline = baselineKpi.reference ?? mean;
+    const status = baseline > 0
+      ? (mean <= baseline * 1.5 ? 'OK' : mean <= baseline * 3 ? 'WARNING' : 'CRITICAL')
+      : 'UNKNOWN';
 
     res.json({
       runs,
@@ -482,7 +486,7 @@ app.get('/api/benchmark', async (req, res) => {
       ci_low: Math.round((mean - eps) * 100) / 100,
       ci_high: Math.round((mean + eps) * 100) / 100,
       baseline: Math.round(baseline * 100) / 100,
-      status: mean <= baseline * 1.5 ? 'OK' : mean <= baseline * 3 ? 'WARNING' : 'CRITICAL',
+      status,
       query: SQL.trim(),
       topTables: topTables.map(t => ({ table: t.table, sizeBytes: Number(t.size_bytes || 0) })),
       kpi: {

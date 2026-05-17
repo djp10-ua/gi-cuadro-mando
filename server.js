@@ -175,6 +175,22 @@ async function resolveAddressPopulationColumn() {
   throw new Error('Population column not found in default.lista_direcciones');
 }
 
+async function resolveAddressIdColumn() {
+  const columns = await query('DESCRIBE TABLE default.lista_direcciones');
+  const names = columns.map(c => String(c.name || ''));
+
+  // Prefer explicit "id" if present, otherwise common "id_direccion" variants.
+  const exactCandidates = ['id', 'id_dirección', 'id_direccion'];
+  const exact = exactCandidates.find(candidate => names.includes(candidate));
+  if (exact) return exact;
+
+  const normalizedCandidates = new Set(['id', 'id_direccion']);
+  const normalized = names.find(name => normalizedCandidates.has(normalizeId(name)));
+  if (normalized) return normalized;
+
+  throw new Error('ID column not found in default.lista_direcciones');
+}
+
 async function getServerDiskInfo() {
   try {
     const stats = await fsp.statfs(process.cwd());
@@ -397,14 +413,19 @@ app.get('/api/audio-features', async (req, res) => {
 app.get('/api/users-by-population', async (req, res) => {
   try {
     const userAddrCol = await resolveUserAddressColumn();
+    const addressIdCol = await resolveAddressIdColumn();
     const addressPopCol = await resolveAddressPopulationColumn();
     const escapedUserAddrCol = userAddrCol.replace(/`/g, '``');
+    const escapedAddressIdCol = addressIdCol.replace(/`/g, '``');
     const escapedAddressPopCol = addressPopCol.replace(/`/g, '``');
     const rows = await query(`
       SELECT ld.\`${escapedAddressPopCol}\` AS poblacion, count() AS cnt
       FROM default.lista_usuarios lu
-      JOIN default.lista_direcciones ld ON lu.\`${escapedUserAddrCol}\` = ld.id
-      WHERE ld.\`${escapedAddressPopCol}\` IS NOT NULL AND ld.\`${escapedAddressPopCol}\` != ''
+      JOIN default.lista_direcciones ld ON toString(lu.\`${escapedUserAddrCol}\`) = toString(ld.\`${escapedAddressIdCol}\`)
+      WHERE
+        lu.\`${escapedUserAddrCol}\` IS NOT NULL
+        AND ld.\`${escapedAddressPopCol}\` IS NOT NULL
+        AND ld.\`${escapedAddressPopCol}\` != ''
       GROUP BY ld.\`${escapedAddressPopCol}\`
       ORDER BY cnt DESC
       LIMIT 10
@@ -457,14 +478,16 @@ app.get('/api/benchmark', async (req, res) => {
     `);
 
     const col = await resolveUserAddressColumn();
+    const addrIdCol = await resolveAddressIdColumn();
     const escapedCol = col.replace(/`/g, '``');
+    const escapedAddrIdCol = addrIdCol.replace(/`/g, '``');
 
     const SQL = `
       SELECT st.genre, st.artist_name, count() AS fav_count, round(avg(st.popularity),2) AS avg_pop
       FROM default.favoritas f
       JOIN default.spotify_tracks st ON f.track_id = st.track_id
       JOIN default.lista_usuarios lu ON f.dni = lu.dni
-      JOIN default.lista_direcciones ld ON lu.\`${escapedCol}\` = ld.id
+      JOIN default.lista_direcciones ld ON toString(lu.\`${escapedCol}\`) = toString(ld.\`${escapedAddrIdCol}\`)
       GROUP BY st.genre, st.artist_name
       ORDER BY fav_count DESC
       LIMIT 20

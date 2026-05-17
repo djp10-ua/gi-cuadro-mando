@@ -159,8 +159,9 @@ async function renderFavsDist() {
 }
 
 // ── Province bar ──
-async function renderProvinces() {
-  const data = await window.dashboardCoreReady.fetchJSON('/api/users-by-province');
+async function renderProvinces(providedData) {
+  const data = providedData || await window.dashboardCoreReady.fetchJSON('/api/users-by-province');
+  if (!Array.isArray(data) || data.length === 0) return;
   window.dashboardCoreReady.loadProvinceKPI(data);
   mkChart('chart-provinces', {
     type: 'bar',

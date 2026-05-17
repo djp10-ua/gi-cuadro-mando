@@ -187,6 +187,13 @@
           <div class="kpi-label">Núcleos CPU</div>
         </div>
       </div>
+      <div class="kpi-card gradient-orange" id="kpi-disk-free">
+        <div class="kpi-icon">💽</div>
+        <div class="kpi-data">
+          <div class="kpi-value" id="kv-disk-free">—</div>
+          <div class="kpi-label">Disco Libre (SO)</div>
+        </div>
+      </div>
     </div>
 
     <div class="charts-row">
@@ -468,12 +475,12 @@
         </div>
         <div class="stat-item">
           <div class="stat-label">Baseline (referencia)</div>
-          <div class="stat-value" id="sv-baseline">150 ms</div>
+          <div class="stat-value" id="sv-baseline">—</div>
         </div>
       </div>
       <div class="bench-query-box">
         <div class="query-label">Consulta Benchmarkeada:</div>
-        <pre class="query-code">SELECT st.genre, st.artist_name, count() AS fav_count, avg(st.popularity) AS avg_pop
+        <pre class="query-code" id="bench-query-code">SELECT st.genre, st.artist_name, count() AS fav_count, avg(st.popularity) AS avg_pop
 FROM favoritas f
 JOIN spotify_tracks st ON f.track_id = st.track_id
 JOIN lista_usuarios lu ON f.dni = lu.dni

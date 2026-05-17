@@ -36,7 +36,14 @@ function activateSection(id) {
 // ── Fetch helper ──
 async function fetchJSON(path) {
   const r = await fetch(API + path);
-  if (!r.ok) throw new Error(r.statusText);
+  if (!r.ok) {
+    let msg = r.statusText;
+    try {
+      const body = await r.json();
+      if (body && body.error) msg = body.error;
+    } catch (_) {}
+    throw new Error(msg || 'Request failed');
+  }
   return r.json();
 }
 
@@ -53,6 +60,10 @@ function fmtBytes(b) {
   if (b >= 1e6) return (b / 1e6).toFixed(2) + ' MB';
   if (b >= 1e3) return (b / 1e3).toFixed(1) + ' KB';
   return b + ' B';
+}
+function fmtPct(p) {
+  if (p === null || p === undefined || Number.isNaN(Number(p))) return '—';
+  return `${Number(p).toFixed(1)}%`;
 }
 function setVal(id, v) {
   const el = document.getElementById(id);
@@ -90,9 +101,11 @@ async function loadCounts() {
 // ── Load SYSTEM ──
 async function loadSystem() {
   const d = await fetchJSON('/api/system');
-  setVal('kv-mem-total', fmtBytes(d.os.totalMem));
-  setVal('kv-mem-free',  fmtBytes(d.os.freeMem));
-  setVal('kv-cpus',      d.os.cpus + ' cores');
+  const k = d.kpis || {};
+  setVal('kv-mem-total', `${fmtBytes(d.os.totalMem)} · ref ${fmtBytes(k.ramTotal?.reference)}`);
+  setVal('kv-mem-free',  `${fmtBytes(d.os.freeMem)} · ref ${fmtBytes(k.ramFree?.reference)}`);
+  setVal('kv-cpus',      `${d.os.cpus} cores · ref ${k.cpuCores?.reference ?? d.os.cpus}`);
+  setVal('kv-disk-free', `${fmtBytes(d.host?.diskFreeBytes)} · ref ${fmtBytes(k.diskFree?.reference)}`);
   const pct = Math.round((1 - d.os.freeMem / d.os.totalMem) * 100);
   setVal('gauge-mem-label', pct + '%');
   return { pct, os: d.os };
@@ -101,7 +114,8 @@ async function loadSystem() {
 // ── Load STORAGE ──
 async function loadStorage() {
   const d = await fetchJSON('/api/storage');
-  setVal('kv-dbsize', d.dbSize.size_readable || fmtBytes(d.dbSize.total_size_bytes));
+  const dbKpi = d.kpis?.dbTotalBytes;
+  setVal('kv-dbsize', `${d.dbSize.total_size_readable || fmtBytes(d.dbSize.total_size_bytes)} · ref ${fmtBytes(dbKpi?.reference)}`);
 
   const tbody = document.getElementById('storage-tbody');
   if (!tbody) return d;
@@ -159,11 +173,17 @@ async function loadBenchmark() {
     kpiCard.querySelector('.kpi-icon').textContent = d.status === 'OK' ? '✅' : d.status === 'WARNING' ? '⚠️' : '🔴';
   }
 
+  setVal('sv-n',      String(d.n || d.runs?.length || 0));
   setVal('sv-mean',   d.mean + ' ms');
   setVal('sv-std',    d.std  + ' ms');
   setVal('sv-eps',    d.eps  + ' ms');
   setVal('sv-result', `${d.ci_low} – ${d.ci_high} ms`);
-  setVal('sv-baseline', d.baseline + ' ms');
+  const delta = d.kpi?.latencyMs?.delta;
+  const deltaPct = d.kpi?.latencyMs?.deltaPct;
+  const deltaTxt = delta === undefined ? '' : ` (Δ ${Number(delta).toFixed(2)} ms, ${fmtPct(deltaPct)})`;
+  setVal('sv-baseline', d.baseline + ' ms' + deltaTxt);
+  const queryEl = document.getElementById('bench-query-code');
+  if (queryEl && d.query) queryEl.textContent = d.query;
 
   const perfPct = Math.min(200, Math.round((d.mean / d.baseline) * 100));
   setVal('gauge-perf-label', perfPct + '%');

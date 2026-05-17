@@ -5,6 +5,7 @@ const path = require('path');
 const os = require('os');
 const fs = require('fs');
 const fsp = require('fs/promises');
+const crypto = require('crypto');
 
 const app = express();
 app.use(cors());
@@ -12,15 +13,25 @@ app.use(express.json());
 
 const ADMIN_USER = process.env.ADMIN_USER || 'admin';
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'admin';
+const USING_DEFAULT_AUTH = !process.env.ADMIN_USER || !process.env.ADMIN_PASSWORD;
 const CLICKHOUSE_URL = process.env.CLICKHOUSE_URL || 'http://localhost:8123';
 const CLICKHOUSE_USER = process.env.CLICKHOUSE_USER || 'default';
 const CLICKHOUSE_PASSWORD = process.env.CLICKHOUSE_PASSWORD || '';
 const CLICKHOUSE_DATABASE = process.env.CLICKHOUSE_DATABASE || 'default';
 const QUERY_TIMEOUT_MS = Number(process.env.QUERY_TIMEOUT_MS || 15000);
 const BENCHMARK_RUNS = Math.max(3, Number(process.env.BENCHMARK_RUNS || 5));
-const BASELINE_FILE = path.join(__dirname, 'data', 'baseline.json');
+const CLEAR_BENCHMARK_CACHE = (process.env.CLEAR_BENCHMARK_CACHE || 'true').toLowerCase() === 'true';
+const DATA_DIR = process.env.DATA_DIR || path.join(__dirname, 'data');
+const BASELINE_FILE = path.join(DATA_DIR, 'baseline.json');
 
 const baselines = loadBaselinesSync();
+
+if (USING_DEFAULT_AUTH) {
+  console.warn('⚠️  Using default admin credentials (admin/admin). Set ADMIN_USER and ADMIN_PASSWORD.');
+}
+if (process.env.NODE_ENV === 'production' && USING_DEFAULT_AUTH) {
+  throw new Error('ADMIN_USER and ADMIN_PASSWORD are required in production mode');
+}
 
 function loadBaselinesSync() {
   try {
@@ -40,7 +51,9 @@ function withBaseline(metricKey, current) {
   const currentNum = Number(current) || 0;
   if (!Object.prototype.hasOwnProperty.call(baselines, metricKey)) {
     baselines[metricKey] = currentNum;
-    saveBaselines().catch(() => {});
+    saveBaselines().catch(err => {
+      console.warn('[BASELINE] No se pudo guardar baseline:', makeMessage(err));
+    });
   }
   const reference = Number(baselines[metricKey]) || 0;
   const delta = currentNum - reference;
@@ -68,6 +81,13 @@ function sendApiError(res, err, status = 500) {
   res.status(status).json({ error: message, status });
 }
 
+function safeEqual(a, b) {
+  const aBuf = Buffer.from(String(a || ''), 'utf8');
+  const bBuf = Buffer.from(String(b || ''), 'utf8');
+  if (aBuf.length !== bBuf.length) return false;
+  return crypto.timingSafeEqual(aBuf, bBuf);
+}
+
 function getBasicAuth(req) {
   const header = req.headers.authorization || '';
   if (!header.startsWith('Basic ')) return null;
@@ -82,7 +102,7 @@ function getBasicAuth(req) {
 
 app.use((req, res, next) => {
   const auth = getBasicAuth(req);
-  if (auth && auth.user === ADMIN_USER && auth.pass === ADMIN_PASSWORD) {
+  if (auth && safeEqual(auth.user, ADMIN_USER) && safeEqual(auth.pass, ADMIN_PASSWORD)) {
     return next();
   }
   res.setHeader('WWW-Authenticate', 'Basic realm="GI Cuadro de Mando Admin"');
@@ -106,11 +126,16 @@ async function query(sql) {
     .query({ query: sql, format: 'JSONEachRow' })
     .then(result => result.json());
 
+  let timeoutId;
   const timeoutPromise = new Promise((_, reject) => {
-    setTimeout(() => reject(new Error(`Timeout en consulta (${QUERY_TIMEOUT_MS} ms)`)), QUERY_TIMEOUT_MS);
+    timeoutId = setTimeout(() => reject(new Error(`Timeout en consulta (${QUERY_TIMEOUT_MS} ms)`)), QUERY_TIMEOUT_MS);
   });
 
-  return Promise.race([queryPromise, timeoutPromise]);
+  try {
+    return await Promise.race([queryPromise, timeoutPromise]);
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 function normalizeId(value) {
@@ -124,7 +149,7 @@ async function resolveUserAddressColumn() {
   const columns = await query('DESCRIBE TABLE default.lista_usuarios');
   const names = columns.map(c => String(c.name || ''));
 
-  const exactCandidates = ['id_dirección', 'id_direccion', 'id_direcci\u00f3n'];
+  const exactCandidates = ['id_dirección', 'id_direccion'];
   const exact = exactCandidates.find(candidate => names.includes(candidate));
   if (exact) return exact;
 
@@ -429,7 +454,11 @@ app.get('/api/benchmark', async (req, res) => {
 
     const runs = [];
     for (let i = 0; i < BENCHMARK_RUNS; i++) {
-      await query('SYSTEM DROP FILESYSTEM CACHE').catch(() => {});
+      if (CLEAR_BENCHMARK_CACHE) {
+        await query('SYSTEM DROP FILESYSTEM CACHE').catch(err => {
+          console.warn('[BENCHMARK] No se pudo limpiar cache de filesystem:', makeMessage(err));
+        });
+      }
       const start = process.hrtime.bigint();
       await query(SQL);
       const elapsedMs = Number(process.hrtime.bigint() - start) / 1_000_000;
@@ -442,7 +471,7 @@ app.get('/api/benchmark', async (req, res) => {
     const z = 1.96;
     const eps = z * (std / Math.sqrt(n));
     const baselineKpi = withBaseline('benchmark.meanMs', mean);
-    const baseline = baselineKpi.reference || mean || 1;
+    const baseline = baselineKpi.reference ?? mean ?? 1;
 
     res.json({
       runs,

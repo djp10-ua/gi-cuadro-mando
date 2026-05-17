@@ -30,6 +30,8 @@ npm install
 | `CLICKHOUSE_DATABASE` | `default` | Base de datos |
 | `BENCHMARK_RUNS` | `5` | Nº de ejecuciones del benchmark |
 | `QUERY_TIMEOUT_MS` | `15000` | Timeout por consulta |
+| `CLEAR_BENCHMARK_CACHE` | `true` | Intenta ejecutar `SYSTEM DROP FILESYSTEM CACHE` antes de cada muestra del benchmark (requiere permisos) |
+| `DATA_DIR` | `./data` | Carpeta local para persistir baselines (`baseline.json`) |
 
 ## Ejecutar en local
 

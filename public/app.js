@@ -2,7 +2,7 @@
 document.addEventListener('DOMContentLoaded', async () => {
   const { loadCounts, loadSystem, loadStorage, loadTopTracksTable, loadBenchmark, setStatus, setLastUpdate, activateSection, fetchJSON } = window.dashboardCoreReady;
   const { renderGenres, renderPopularity, renderTopTracksChart, renderTracksYear, renderFeaturesYear, renderRadar, renderTopArtists, renderFavsDist, renderProvinces, renderStorageCharts, renderMemGauge, renderBenchRuns, mkSparkline } = window.dashboardCharts;
-  const REFRESH_MS = 30000;
+  const REFRESH_INTERVAL_MS = 30000;
 
   const overlay = document.getElementById('loading-overlay');
 
@@ -98,5 +98,5 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ── Initial load ──
   await loadAll();
-  setInterval(loadAll, REFRESH_MS);
+  setInterval(loadAll, REFRESH_INTERVAL_MS);
 });

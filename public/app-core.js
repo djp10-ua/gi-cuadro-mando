@@ -61,7 +61,7 @@ function fmtBytes(b) {
   if (b >= 1e3) return (b / 1e3).toFixed(1) + ' KB';
   return b + ' B';
 }
-function fmtPct(p) {
+function fmtPercent(p) {
   if (p === null || p === undefined || Number.isNaN(Number(p))) return '—';
   return `${Number(p).toFixed(1)}%`;
 }
@@ -102,10 +102,10 @@ async function loadCounts() {
 async function loadSystem() {
   const d = await fetchJSON('/api/system');
   const k = d.kpis || {};
-  setVal('kv-mem-total', `${fmtBytes(d.os.totalMem)} · ref ${fmtBytes(k.ramTotal?.reference)}`);
-  setVal('kv-mem-free',  `${fmtBytes(d.os.freeMem)} · ref ${fmtBytes(k.ramFree?.reference)}`);
-  setVal('kv-cpus',      `${d.os.cpus} cores · ref ${k.cpuCores?.reference ?? d.os.cpus}`);
-  setVal('kv-disk-free', `${fmtBytes(d.host?.diskFreeBytes)} · ref ${fmtBytes(k.diskFree?.reference)}`);
+  setVal('kv-mem-total', `${fmtBytes(d.os.totalMem)} | ref: ${fmtBytes(k.ramTotal?.reference)}`);
+  setVal('kv-mem-free',  `${fmtBytes(d.os.freeMem)} | ref: ${fmtBytes(k.ramFree?.reference)}`);
+  setVal('kv-cpus',      `${d.os.cpus} cores | ref: ${k.cpuCores?.reference ?? d.os.cpus}`);
+  setVal('kv-disk-free', `${fmtBytes(d.host?.diskFreeBytes)} | ref: ${fmtBytes(k.diskFree?.reference)}`);
   const pct = Math.round((1 - d.os.freeMem / d.os.totalMem) * 100);
   setVal('gauge-mem-label', pct + '%');
   return { pct, os: d.os };
@@ -115,7 +115,7 @@ async function loadSystem() {
 async function loadStorage() {
   const d = await fetchJSON('/api/storage');
   const dbKpi = d.kpis?.dbTotalBytes;
-  setVal('kv-dbsize', `${d.dbSize.total_size_readable || fmtBytes(d.dbSize.total_size_bytes)} · ref ${fmtBytes(dbKpi?.reference)}`);
+  setVal('kv-dbsize', `${d.dbSize.total_size_readable || fmtBytes(d.dbSize.total_size_bytes)} | ref: ${fmtBytes(dbKpi?.reference)}`);
 
   const tbody = document.getElementById('storage-tbody');
   if (!tbody) return d;
@@ -180,7 +180,7 @@ async function loadBenchmark() {
   setVal('sv-result', `${d.ci_low} – ${d.ci_high} ms`);
   const delta = d.kpi?.latencyMs?.delta;
   const deltaPct = d.kpi?.latencyMs?.deltaPct;
-  const deltaTxt = delta === undefined ? '' : ` (Δ ${Number(delta).toFixed(2)} ms, ${fmtPct(deltaPct)})`;
+  const deltaTxt = delta === undefined ? '' : ` (Δ ${Number(delta).toFixed(2)} ms, ${fmtPercent(deltaPct)})`;
   setVal('sv-baseline', d.baseline + ' ms' + deltaTxt);
   const queryEl = document.getElementById('bench-query-code');
   if (queryEl && d.query) queryEl.textContent = d.query;

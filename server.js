@@ -175,6 +175,21 @@ async function resolveAddressPopulationColumn() {
   throw new Error('Population column not found in default.lista_direcciones');
 }
 
+async function resolveUserPopulationColumn() {
+  const columns = await query('DESCRIBE TABLE default.lista_usuarios');
+  const names = columns.map(c => String(c.name || ''));
+
+  const exactCandidates = ['población', 'poblacion', 'localidad', 'municipio', 'ciudad'];
+  const exact = exactCandidates.find(candidate => names.includes(candidate));
+  if (exact) return exact;
+
+  const normalizedCandidates = new Set(['poblacion', 'localidad', 'municipio', 'ciudad']);
+  const normalized = names.find(name => normalizedCandidates.has(normalizeId(name)));
+  if (normalized) return normalized;
+
+  throw new Error('Population column not found in default.lista_usuarios');
+}
+
 async function resolveAddressIdColumn() {
   const columns = await query('DESCRIBE TABLE default.lista_direcciones');
   const names = columns.map(c => String(c.name || ''));
@@ -412,24 +427,52 @@ app.get('/api/audio-features', async (req, res) => {
 // 9. Users by population (localidad)
 app.get('/api/users-by-population', async (req, res) => {
   try {
-    const userAddrCol = await resolveUserAddressColumn();
-    const addressIdCol = await resolveAddressIdColumn();
-    const addressPopCol = await resolveAddressPopulationColumn();
-    const escapedUserAddrCol = userAddrCol.replace(/`/g, '``');
-    const escapedAddressIdCol = addressIdCol.replace(/`/g, '``');
-    const escapedAddressPopCol = addressPopCol.replace(/`/g, '``');
-    const rows = await query(`
-      SELECT ld.\`${escapedAddressPopCol}\` AS poblacion, count() AS cnt
-      FROM default.lista_usuarios lu
-      JOIN default.lista_direcciones ld ON toString(lu.\`${escapedUserAddrCol}\`) = toString(ld.\`${escapedAddressIdCol}\`)
-      WHERE
-        lu.\`${escapedUserAddrCol}\` IS NOT NULL
-        AND ld.\`${escapedAddressPopCol}\` IS NOT NULL
-        AND ld.\`${escapedAddressPopCol}\` != ''
-      GROUP BY ld.\`${escapedAddressPopCol}\`
-      ORDER BY cnt DESC
-      LIMIT 10
-    `);
+    let rows = [];
+    let joinError = null;
+
+    try {
+      const userAddrCol = await resolveUserAddressColumn();
+      const addressIdCol = await resolveAddressIdColumn();
+      const addressPopCol = await resolveAddressPopulationColumn();
+      const escapedUserAddrCol = userAddrCol.replace(/`/g, '``');
+      const escapedAddressIdCol = addressIdCol.replace(/`/g, '``');
+      const escapedAddressPopCol = addressPopCol.replace(/`/g, '``');
+      rows = await query(`
+        SELECT ld.\`${escapedAddressPopCol}\` AS poblacion, count() AS cnt
+        FROM default.lista_usuarios lu
+        JOIN default.lista_direcciones ld ON toString(lu.\`${escapedUserAddrCol}\`) = toString(ld.\`${escapedAddressIdCol}\`)
+        WHERE
+          lu.\`${escapedUserAddrCol}\` IS NOT NULL
+          AND ld.\`${escapedAddressPopCol}\` IS NOT NULL
+          AND toString(ld.\`${escapedAddressPopCol}\`) != ''
+        GROUP BY ld.\`${escapedAddressPopCol}\`
+        ORDER BY cnt DESC
+        LIMIT 10
+      `);
+    } catch (err) {
+      joinError = err;
+    }
+
+    if (!Array.isArray(rows) || rows.length === 0) {
+      try {
+        const userPopCol = await resolveUserPopulationColumn();
+        const escapedUserPopCol = userPopCol.replace(/`/g, '``');
+        rows = await query(`
+          SELECT lu.\`${escapedUserPopCol}\` AS poblacion, count() AS cnt
+          FROM default.lista_usuarios lu
+          WHERE
+            lu.\`${escapedUserPopCol}\` IS NOT NULL
+            AND toString(lu.\`${escapedUserPopCol}\`) != ''
+          GROUP BY lu.\`${escapedUserPopCol}\`
+          ORDER BY cnt DESC
+          LIMIT 10
+        `);
+      } catch (fallbackErr) {
+        if (joinError) throw joinError;
+        throw fallbackErr;
+      }
+    }
+
     res.json(rows.map(r => ({ population: r.poblacion, count: Number(r.cnt) })));
   } catch (err) {
     sendApiError(res, err);

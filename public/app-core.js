@@ -192,7 +192,8 @@ async function loadBenchmark() {
 
 // ── Load populations KPI ──
 async function loadPopulationKPI(data) {
-  setVal('kv-populations', data.length);
+  const totalUsers = Array.isArray(data) ? data.reduce((acc, row) => acc + Number(row?.count || 0), 0) : null;
+  setVal('kv-populations', totalUsers === null ? '—' : fmt(totalUsers));
 }
 
 // ── Last update ──

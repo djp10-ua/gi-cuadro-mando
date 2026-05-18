@@ -1,7 +1,7 @@
 /* ── MAIN ENTRY POINT ── */
 document.addEventListener('DOMContentLoaded', async () => {
   const { loadCounts, loadSystem, loadStorage, loadTopTracksTable, loadBenchmark, setStatus, setLastUpdate, activateSection, fetchJSON } = window.dashboardCoreReady;
-  const { renderGenres, renderPopularity, renderTopTracksChart, renderTracksYear, renderFeaturesYear, renderRadar, renderTopArtists, renderFavsDist, renderPopulations, renderStorageCharts, renderMemGauge, renderBenchRuns, mkSparkline } = window.dashboardCharts;
+  const { renderGenres, renderPopularity, renderTopTracksChart, renderTracksYear, renderRadar, renderTopArtists, renderMusicGenres, renderMusicPopularity, renderPopulations, renderStorageCharts, renderMemGauge, renderBenchRuns, mkSparkline } = window.dashboardCharts;
   const REFRESH_INTERVAL_MS = 30000;
 
   const overlay = document.getElementById('loading-overlay');
@@ -58,10 +58,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       // Music charts
       await Promise.allSettled([
-        renderFeaturesYear(),
         renderRadar(),
         renderTopArtists(),
-        renderFavsDist(),
+        renderMusicGenres(),
+        renderMusicPopularity(),
       ]);
 
       // Users charts

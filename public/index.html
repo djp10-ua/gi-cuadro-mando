@@ -257,15 +257,6 @@
   <section class="dashboard-section" id="music">
 
     <div class="charts-row">
-      <div class="chart-card wide" id="cc-features-year">
-        <div class="chart-header">
-          <h3>Evolución de Características de Audio por Año</h3>
-          <span class="chart-badge">Danceability · Energy · Valence</span>
-        </div>
-        <div class="chart-body">
-          <canvas id="chart-features-year"></canvas>
-        </div>
-      </div>
       <div class="chart-card" id="cc-audio-radar">
         <div class="chart-header">
           <h3>Radar de Características por Género</h3>
@@ -273,6 +264,15 @@
         </div>
         <div class="chart-body">
           <canvas id="chart-radar"></canvas>
+        </div>
+      </div>
+      <div class="chart-card" id="cc-music-genres">
+        <div class="chart-header">
+          <h3>🎼 Géneros con Más Canciones</h3>
+          <span class="chart-badge">Top 10</span>
+        </div>
+        <div class="chart-body">
+          <canvas id="chart-music-genres"></canvas>
         </div>
       </div>
     </div>
@@ -287,13 +287,13 @@
           <canvas id="chart-top-artists"></canvas>
         </div>
       </div>
-      <div class="chart-card" id="cc-favs-dist">
+      <div class="chart-card" id="cc-music-popularity">
         <div class="chart-header">
-          <h3>Distribución de Favoritas por Usuario</h3>
-          <span class="chart-badge">Curva de Distribución</span>
+          <h3>📈 Distribución de Popularidad</h3>
+          <span class="chart-badge">Rangos</span>
         </div>
         <div class="chart-body">
-          <canvas id="chart-favs-dist"></canvas>
+          <canvas id="chart-music-popularity"></canvas>
         </div>
       </div>
     </div>

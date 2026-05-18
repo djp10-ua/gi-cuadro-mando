@@ -145,6 +145,32 @@ async function renderTopArtists() {
   });
 }
 
+// ── Music genres ──
+async function renderMusicGenres() {
+  const data = await window.dashboardCoreReady.fetchJSON('/api/genres');
+  mkChart('chart-music-genres', {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d.genre),
+      datasets: [{ label: 'Canciones', data: data.map(d => d.count), backgroundColor: data.map((_,i) => PALETTE[i % PALETTE.length] + 'cc'), borderColor: data.map((_,i) => PALETTE[i % PALETTE.length]), borderWidth: 1, borderRadius: 6 }],
+    },
+    options: { ...BASE_OPTS, indexAxis: 'y', plugins: { ...BASE_OPTS.plugins, legend: { display: false }, datalabels: { display: false } } },
+  });
+}
+
+// ── Music popularity distribution ──
+async function renderMusicPopularity() {
+  const data = await window.dashboardCoreReady.fetchJSON('/api/popularity');
+  mkChart('chart-music-popularity', {
+    type: 'bar',
+    data: {
+      labels: data.map(d => d.bucket + '-' + (d.bucket + 9)),
+      datasets: [{ label: 'Tracks', data: data.map(d => d.count), backgroundColor: PALETTE.map(c => c + 'bb'), borderRadius: 5 }],
+    },
+    options: { ...BASE_OPTS, plugins: { ...BASE_OPTS.plugins, legend: { display: false } } },
+  });
+}
+
 // ── Favorites distribution ──
 async function renderFavsDist() {
   const data = await window.dashboardCoreReady.fetchJSON('/api/favorites-dist');
@@ -271,4 +297,4 @@ function renderBenchRuns(d) {
   });
 }
 
-window.dashboardCharts = { renderGenres, renderPopularity, renderTopTracksChart, renderTracksYear, renderFeaturesYear, renderRadar, renderTopArtists, renderFavsDist, renderPopulations, renderStorageCharts, renderMemGauge, renderBenchRuns, mkSparkline };
+window.dashboardCharts = { renderGenres, renderPopularity, renderTopTracksChart, renderTracksYear, renderFeaturesYear, renderRadar, renderTopArtists, renderMusicGenres, renderMusicPopularity, renderFavsDist, renderPopulations, renderStorageCharts, renderMemGauge, renderBenchRuns, mkSparkline };
